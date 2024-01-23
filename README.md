@@ -36,8 +36,83 @@ This project showcases a practical implementation of model checking in verifying
 - **Language**: Go (version 1.19.1)
 - **Testing Frameworks**: Utilized Go's built-in testing frameworks for comprehensive unit and integration tests.
 
-## How to Run
+## Debugging Certain Scenarios
 
+## Debugging Certain Scenarios
+
+### Strategy Overview
+
+To address and debug edge-case scenarios in distributed systems like those encountered with the Paxos protocol, I have employed detailed sequence diagrams. These diagrams are instrumental in visualizing the interactions between different components of the system, specifically proposers and acceptors, and the potential race conditions that can arise.
+
+### Diagram Development Process
+
+1. **Identify the Scenario**: Start by identifying the specific edge-case or race condition that needs to be examined.
+
+2. **Define the Participants**: List all the participants involved in the scenario. In Paxos, these are typically the proposers (P) and acceptors (A).
+
+3. **Sequence of Events**: Outline the sequence of events that occur between the participants. This includes proposals, acceptances, rejections, and decisions.
+
+4. **Time Axis Construction**: Create a time axis for the diagram, representing the chronological order of events.
+
+5. **Message Exchanges**: Draw arrows to represent the messages exchanged between the participants. These messages include 'propose', 'accept', and 'decided'.
+
+6. **Annotations**: Add annotations to describe the conditions and state changes at each step, such as `Np`, `Na`, `Va`, and `isDecided` statuses.
+
+7. **Decision Points**: Clearly mark the decision points, where an acceptor decides on a value, and note the conditions under which these decisions are made.
+
+8. **Edge-Case Identification**: Highlight the edge-case scenarios, such as where a proposer might receive an 'ok' message from an acceptor that has already decided, raising the question of whether the value `v_a` can be modified post-decision.
+
+9. **Consistency Checks**: Ensure that the diagram reflects the consistency rules of the Paxos protocol, where once a value has been decided by the majority, no other value can be accepted.
+
+10. **Iterative Refinement**: Continuously refine the diagram as new insights are gained or additional complexities are identified.
+
+### Example Use-Cases
+ 
+Concurrent Proposers
+![Alt text](imgs/concurrent_proposers.png)
+
+In this scenario, we analyze a system with two concurrent proposers, P1 and P2, interacting with a set of acceptors A1, A2, and A3. The objective is to understand how the system reaches consensus when multiple proposers are active simultaneously.
+
+- **Scenario Flow**:
+  - P1 starts the consensus process with `propose,1` but faces a rejection from A1 (`ok, 1, na=va=null` with a rejection mark), which simulates a message loss or a failure.
+  - P1 then sends `accept, 1, V` to all acceptors.
+  - P2 concurrently sends `propose,2`, and A1 and A2 respond with `ok, 2, na=va=null`.
+  - A1 accepts P1's proposal (`accept, 1, V`), while A2 accepts P2's proposal (`accept, 2, V'`).
+  - A2's acceptance of P2's proposal has a rejection mark, indicating a failure in the acceptance process.
+  - P1 backs off for a while as it cannot reach consensus due to message rejections.
+  - Despite the initial failures and rejections, P2 continues the process and eventually reaches consensus on value V', which differs from P1's initial proposal.
+
+
+
+Concurrent Proposers with Failures
+![Alt text](imgs/concurrent_proposers_failures.png)
+
+This scenario demonstrates the system's behavior in the presence of failures, such as message loss or rejection.
+
+- **Scenario Flow**:
+  - P1 starts the consensus process with `propose,1` but faces a rejection from A1 (`ok, 1, na=va=null` with a rejection mark), which simulates a message loss or a failure.
+  - P1 then sends `accept, 1, V` to all acceptors.
+  - P2 concurrently sends `propose,2`, and A1 and A2 respond with `ok, 2, na=va=null`.
+  - A1 accepts P1's proposal (`accept, 1, V`), while A2 accepts P2's proposal (`accept, 2, V'`).
+  - A2's acceptance of P2's proposal has a rejection mark, indicating a failure in the acceptance process.
+  - P1 backs off for a while as it cannot reach consensus due to message rejections.
+  - Despite the initial failures and rejections, P2 continues the process and eventually reaches consensus on value V', which differs from P1's initial proposal.
+
+
+Sequential Proposers
+![Alt text](imgs/sequential_proposers.png)
+In the diagram, the scenario explores the question of whether an acceptor can modify its accepted value `v_a` after it has already decided on a value. This particular case is crucial because it can lead to inconsistencies within the system if not handled correctly.
+
+The scenario begins with proposer `P1` sending a proposal to acceptors `A1`, `A2`, and `A3`. `A1` and `A3` respond with 'ok', allowing `P1` to move forward. However, `P3` concurrently sends a proposal which is received by `A2`. The sequence shows `A2` and `A1` deciding on `P3`'s proposal, while `A3` is still on `P1`'s proposal due to message delays.
+
+This edge-case analysis is vital in ensuring that our Paxos implementation adheres to the fundamental properties of the consensus protocol and handles all such conditions correctly. By visualizing these interactions, we can debug the system's behavior and confirm the reliability of our implementation even under the most unusual or rare circumstances.
+
+
+## How to Run
+To run all the tests, I have developed a bash script. Type the following in your terminal. Make sure your GOMODULE is configured properly.
+```
+$ ./check_tests.sh
+```
 
 
 
